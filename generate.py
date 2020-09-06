@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-def generate_sample(size=200, seed=0, save=True):
+def generate_sample(size=200, seed=0, save=False):
     """
     Cell information:
     * Location: square box, x, y, r1, r2
@@ -21,15 +21,28 @@ def generate_sample(size=200, seed=0, save=True):
     marker_sigma = 1
     radius_mu = 10
     radius_sigma = 1
-    labels = [-1, -2, -3, -4, 1, 2, 3, 4, 5]
+    n_edge = 5000
 
-    # Randomization
+    # Generate features
     rs = np.random.RandomState(seed=seed)
     cen = rs.uniform(0, fig_size, size=(size, 2))
     rad = np.abs(rs.normal(radius_mu, radius_sigma, size=(size, 2)))
     loc = np.array([cen[:, 0]-rad[:, 0], cen[:, 0]+rad[:, 0], cen[:, 1]-rad[:, 1], cen[:, 1]+rad[:, 1]])
     marker = np.abs(rs.normal(marker_mu, marker_sigma, size=(size, 7)))
-    label = rs.choice(labels, size)
+
+    # Generate labels
+    w_y = rs.normal(size=(7, ))
+    logits = -np.linalg.norm(
+        cen.reshape(1, size, 2) - cen.reshape(size, 1, 2), axis=2
+    )
+    threshold = np.sort(logits.reshape(-1))[-n_edge]
+    adj = (logits >= threshold).astype(float)
+    y_mean = np.diag(1. / adj.sum(axis=0)).dot(adj).dot(marker).dot(w_y)
+    y_cov = np.eye(size)
+    y = rs.multivariate_normal(y_mean, y_cov)
+    threshold = np.median(y)
+    label = (y >= threshold).astype(float)
+    label[np.where(label == 0)[0]] = -1
 
     if save:
         pickle.dump((loc, marker, label), open(os.path.join("data", filename), "wb"))
@@ -93,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-o', '--save',
         type=bool,
-        default=True,
+        default=False,
         help='Save the output or not'
     )
     args, _ = parser.parse_known_args()

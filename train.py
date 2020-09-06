@@ -10,10 +10,10 @@ from utils import *
 
 def main(seed):
     # Parameters
-    verbose = True
+    verbose = False
     log_interval = 10
 
-    model_name = "gcn"
+    model_name = "gat"
     epochs = 1000
     patience = 50
     n_cell = 300
