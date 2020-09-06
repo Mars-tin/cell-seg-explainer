@@ -28,12 +28,7 @@ class MLP(nn.Module):
 
     def forward(self, data):
         x = data.X
-        """
-        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.activation(self.fc1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.fc2(x)
-        """
-        x = self.activation(self.fc1(x))
         x = self.fc2(x)
         return x.flatten()

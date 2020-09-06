@@ -35,12 +35,7 @@ class GAT(nn.Module):
     def forward(self, data):
         x = data.X
         edge_index = data.edge_index
-        """
-        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.activation(self.conv1(x, edge_index))
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.conv2(x, edge_index)
-        """
-        x = self.activation(self.conv1(x, edge_index))
         x = self.conv2(x, edge_index)
         return x.flatten()
