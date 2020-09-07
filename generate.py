@@ -12,7 +12,7 @@ def generate_sample(size=200, seed=0, save=False):
     Cell information:
     * Location: square box, x, y, r1, r2
     * Marker: a vector of size 7
-    * Label: -: {n1, n2, n3, n4} & +: {p1, p2, p3, p4, p5}
+    * Label: +1 and -1
     """
     # Parameters
     filename = 'cell_sample_size={}_seed={}.pkl'.format(size, seed)
