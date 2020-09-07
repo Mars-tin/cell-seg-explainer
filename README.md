@@ -55,3 +55,7 @@ Node: 298 ; Label: -1.0 ; Marker: tensor([2.5129, 3.0696, 2.7995, 3.7030, 4.0515
 
 The visualization is automatic:
 
+![Sample Visualization](https://github.com/Mars-tin/cell-seg-explainer/blob/master/plot/sample.png)
+
+
+
