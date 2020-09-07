@@ -5,7 +5,7 @@ GCN
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn.conv import GCNConv
 
 
 class GCN(nn.Module):
@@ -28,10 +28,8 @@ class GCN(nn.Module):
         self.dropout = dropout
         self.activation = F.relu
 
-    def forward(self, data):
-        x = data.X
-        edge_index = data.edge_index
+    def forward(self, x, edge_index):
         x = self.activation(self.conv1(x, edge_index))
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.conv2(x, edge_index)
-        return x.flatten()
+        return x

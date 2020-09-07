@@ -26,9 +26,8 @@ class MLP(nn.Module):
         self.dropout = dropout
         self.activation = F.relu
 
-    def forward(self, data):
-        x = data.X
+    def forward(self, x, edge_index):
         x = self.activation(self.fc1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
-        return x.flatten()
+        return x

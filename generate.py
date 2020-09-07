@@ -43,6 +43,7 @@ def generate_sample(size=200, seed=0, save=False):
     threshold = np.median(y)
     label = (y >= threshold).astype(float)
     label[np.where(label == 0)[0]] = -1
+    label = np.expand_dims(label, axis=1)
 
     if save:
         pickle.dump((loc, marker, label), open(os.path.join("data", filename), "wb"))
@@ -53,6 +54,9 @@ class SyntheticDataset(Dataset):
 
     def __init__(self, loc, marker, label, n_edge):
         super().__init__()
+        self.num_classes = 2
+        self.num_features = 7
+
         self.X = torch.from_numpy(marker).float()
         self.y = torch.from_numpy(label).float()
         n = self.__len__()
