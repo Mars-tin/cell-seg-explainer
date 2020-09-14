@@ -56,7 +56,7 @@ def evaluate(data, model, criterion, epoch, stats, verbose=False):
         log_training(epoch, stats)
 
 
-def train(model_name='gcn', data='real', epochs=1000, seed=0):
+def train(model_name='gcn', data='synthetic', epochs=1000, seed=0):
     # Parameters
     verbose = False
     log_interval = 10

@@ -2,18 +2,20 @@
 
 An GNN explainer on Synthetic dataset over cell segmentation data.
 
-## Usage
+## Node Explanation
+
+### Usage
 
 ```python
-python explain.py -m gcn -n 1
+python explain_node.py -m gcn -n 1
 ```
 
 * `-m` / `--model`: Name of the GNN model.
 * `-n` / `–node`: Node index to explain.
 
-## Example
+### Example
 
-Run `python explain.py` by default:
+Run `python explain_node.py` by default:
 
 ```bash
 The loss on test dataset is: 1.0451111793518066 obtained in epoch 639
@@ -58,4 +60,8 @@ The visualization is automatic:
 ![Sample Visualization](https://github.com/Mars-tin/cell-seg-explainer/blob/master/plot/sample.png)
 
 
+
+## Label Explanation
+
+TODO
 
