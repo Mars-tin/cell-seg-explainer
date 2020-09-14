@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch, Rectangle
 
 import torch
 from torch.utils.data import Dataset
@@ -111,10 +111,38 @@ def load_dataset():
         if 'Islet.csv' in filename:
             df = pd.read_csv((os.path.join('data/', filename)))
             df = df[locations + celltype]
+            print()
             # TODO
 
 
 def visualize_dataset():
+    def box_plot(df, filename):
+        x_sz = np.max(df['XMax'])
+        y_sz = np.max(df['YMax'])
+        df = df.loc[(df['Alpha'] == 1) | (df['Beta'] == 1) | (df['Delta'] == 1)]
+        fig, ax = plt.subplots()
+        for tp, color in {'Alpha': 'y', 'Beta': 'b', 'Delta': 'r'}.items():
+            df_type = df.loc[df[tp] == 1]
+            cells = []
+            for idx, row in df_type.iterrows():
+                rect = Rectangle((row['XMin'], row['YMin']),
+                                 row['XMax']-row['XMin'],
+                                 row['YMax']-row['YMin'],
+                                 facecolor=color, alpha=1)
+                cells.append(rect)
+            pc = PatchCollection(cells, match_original=True)
+            ax.add_collection(pc)
+        plt.xlim(0, x_sz)
+        plt.ylim(0, y_sz)
+
+        a = Patch(color='y', label='Alpha')
+        b = Patch(color='b', label='Beta')
+        d = Patch(color='r', label='Delta')
+
+        ax.legend(handles=[a, b, d], loc='upper right')
+        plt.savefig('plot/box/'+filename[:-4])
+        plt.show()
+
     def scatter_plot(df, filename):
         x_sz = np.max(df['XMax'])
         y_sz = np.max(df['YMax'])
@@ -129,7 +157,7 @@ def visualize_dataset():
         plt.xlim(0, x_sz)
         plt.ylim(0, y_sz)
         ax.legend(loc='upper right')
-        plt.savefig('plot/visual/'+filename[:-4])
+        plt.savefig('plot/scatter/'+filename[:-4])
         plt.show()
 
     locations = ['XMin', 'XMax', 'YMin', 'YMax']
@@ -139,7 +167,7 @@ def visualize_dataset():
         if 'Islet.csv' in filename:
             df = pd.read_csv((os.path.join('data/', filename)))
             df = df[locations + celltype]
-            scatter_plot(df, filename)
+            box_plot(df, filename)
 
 
 if __name__ == "__main__":

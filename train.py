@@ -135,4 +135,4 @@ def train(model_name='gcn', data='synthetic', epochs=1000, seed=0):
 
 if __name__ == "__main__":
     for seed in range(10):
-        train(model_name='gcn', seed=seed)
+        train(model_name='gcn', data='real', seed=seed)
