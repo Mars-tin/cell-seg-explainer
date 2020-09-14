@@ -15,7 +15,7 @@ class GAT(nn.Module):
     def __init__(self,
                  num_features,
                  hidden_size,
-                 num_targets=1,
+                 num_classes=2,
                  num_heads=8,
                  dropout=0):
         super(GAT, self).__init__()
@@ -25,7 +25,7 @@ class GAT(nn.Module):
                              heads=num_heads,
                              dropout=dropout)
         self.conv2 = GATConv(hidden_size * num_heads,
-                             num_targets,
+                             num_classes,
                              heads=1,
                              dropout=dropout)
 

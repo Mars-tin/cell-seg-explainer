@@ -10,7 +10,55 @@ import torch
 from torch.utils.data import Dataset
 
 
-def generate_sample(num_features=7, size=200, seed=0, save=False):
+class SyntheticDataset(Dataset):
+
+    def __init__(self, num_classes, num_features, loc, marker, label, n_edge=None):
+        super().__init__()
+        self.num_classes = num_classes
+        self.num_features = num_features
+
+        self.X = torch.from_numpy(marker).float()
+        self.y = torch.from_numpy(label).long()
+        n = self.__len__()
+
+        if n_edge is None:
+            n_edge = 10 * n
+        x = np.mean(loc[0:2], axis=0)
+        y = np.mean(loc[2:4], axis=0)
+        center = np.concatenate((x, y))
+        logits = -np.linalg.norm(
+            center.reshape(1, n, 2) - center.reshape(n, 1, 2), axis=2
+        )
+        threshold = np.sort(logits.reshape(-1))[-n_edge-n]
+        adj = (logits >= threshold).astype(float) - np.eye(n)
+        self.edge_index = torch.tensor(np.array(list(adj.nonzero())))
+
+        n = self.__len__()
+        m = n // 3
+        self.train_mask = torch.zeros(n).to(dtype=torch.bool)
+        self.train_mask[:m] = True
+        self.val_mask = torch.zeros(n).to(dtype=torch.bool)
+        self.val_mask[m:2*m] = True
+        self.test_mask = torch.zeros(n).to(dtype=torch.bool)
+        self.test_mask[-m:] = True
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
+
+    def merge(self, dataset):
+        new_edge_index = dataset.edge_index + self.__len__()
+        self.edge_index = torch.cat((self.edge_index, new_edge_index), 1)
+        self.X = torch.cat((self.X, dataset.X), 0)
+        self.y = torch.cat((self.y, dataset.y), 0)
+        self.train_mask = torch.cat((self.train_mask, dataset.train_mask), 0)
+        self.val_mask = torch.cat((self.val_mask, dataset.val_mask), 0)
+        self.test_mask = torch.cat((self.test_mask, dataset.test_mask), 0)
+
+
+def generate_sample(num_features=7, size=300, seed=0, save=False):
     """
     Cell information:
     * Location: square box, x, y, r1, r2
@@ -34,61 +82,23 @@ def generate_sample(num_features=7, size=200, seed=0, save=False):
     marker = np.abs(rs.normal(marker_mu, marker_sigma, size=(size, num_features)))
 
     # Generate labels
-    w_y = rs.normal(size=(7, ))
+    w_y = rs.normal(size=(num_features, ))
     logits = -np.linalg.norm(
         cen.reshape(1, size, 2) - cen.reshape(size, 1, 2), axis=2
     )
-    threshold = np.sort(logits.reshape(-1))[-n_edge]
+    threshold = np.sort(logits.reshape(-1))[-n_edge-size]
     adj = (logits >= threshold).astype(float)
     y_mean = np.diag(1. / adj.sum(axis=0)).dot(adj).dot(marker).dot(w_y)
     y_cov = np.eye(size)
     y = rs.multivariate_normal(y_mean, y_cov)
     threshold = np.median(y)
     label = (y >= threshold).astype(float)
-    label[np.where(label == 0)[0]] = -1
+    label[np.where(label == 0)[0]] = 0
     label = np.expand_dims(label, axis=1)
 
     if save:
         pickle.dump((loc, marker, label), open(os.path.join("data", filename), "wb"))
     return loc, marker, label
-
-
-class SyntheticDataset(Dataset):
-
-    def __init__(self, num_classes, num_features, loc, marker, label, n_edge):
-        super().__init__()
-        self.num_classes = num_classes
-        self.num_features = num_features
-
-        self.X = torch.from_numpy(marker).float()
-        self.y = torch.from_numpy(label).float()
-        n = self.__len__()
-
-        x = np.mean(loc[0:2], axis=0)
-        y = np.mean(loc[2:4], axis=0)
-        center = np.concatenate((x, y))
-        logits = -np.linalg.norm(
-            center.reshape(1, n, 2) - center.reshape(n, 1, 2), axis=2
-        )
-        threshold = np.sort(logits.reshape(-1))[-n_edge]
-        self.adj = (logits >= threshold).astype(float)
-
-        self.edge_index = torch.tensor(np.array(list(self.adj.nonzero())))
-
-        n = self.__len__()
-        m = n // 3
-        self.train_mask = torch.zeros(n).to(dtype=torch.bool)
-        self.train_mask[:m] = True
-        self.val_mask = torch.zeros(n).to(dtype=torch.bool)
-        self.val_mask[m:2*m] = True
-        self.test_mask = torch.zeros(n).to(dtype=torch.bool)
-        self.test_mask[-m:] = True
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
 
 
 def generate_dataset(num_features=7, size=300, n_edge=5000, seed=0):
@@ -99,20 +109,37 @@ def generate_dataset(num_features=7, size=300, n_edge=5000, seed=0):
 def load_dataset():
     locations = ['XMin', 'XMax', 'YMin', 'YMax']
     celltype = ['Alpha', 'Beta', 'Delta']
-    markers = ['CHGA', 'CPEP', 'GCG', 'SST']
-    metrics = ['Cell Intensity', 'Cytoplasm Intensity', '% Cytoplasm Completeness']
+    markers = ['CPEP', 'GCG', 'SST']
+    metrics = ['Cytoplasm Intensity', '% Cytoplasm Completeness']
     scores = []
 
     for marker in markers:
         for metric in metrics:
             scores.append(marker+' '+metric)
 
-    for filename in os.listdir('data/'):
+    # for filename in os.listdir('data/'):
+    dataset = None
+    for filename in ['ABHQ115-T2D-Islet.csv', 'AFG1440-ND-Islet.csv']:
         if 'Islet.csv' in filename:
             df = pd.read_csv((os.path.join('data/', filename)))
-            df = df[locations + celltype]
-            print()
-            # TODO
+            df = df.loc[(df['Alpha'] == 1) | (df['Beta'] == 1) | (df['Delta'] == 1)]
+            df = df[locations + celltype + scores]
+            marker = []
+            for score in scores:
+                marker.append(df[score])
+            marker = np.asarray(marker).T
+            if 'ND' in filename:
+                label = np.zeros((marker.shape[0], 1), dtype=int)
+            else:
+                label = np.ones((marker.shape[0], 1), dtype=int)
+            loc = np.asarray([df['XMin'], df['XMax'], df['YMin'], df['YMax']])
+            if dataset is None:
+                dataset = SyntheticDataset(
+                    2, marker.shape[1], loc, marker, label)
+            else:
+                dataset.merge(SyntheticDataset(
+                    2, marker.shape[1], loc, marker, label))
+    return dataset
 
 
 def visualize_dataset():

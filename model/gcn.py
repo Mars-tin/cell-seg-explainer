@@ -2,7 +2,6 @@
 GCN
     Constructs a pytorch model for a GCN
 """
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn.conv import GCNConv
@@ -16,14 +15,14 @@ class GCN(nn.Module):
     def __init__(self,
                  num_features,
                  hidden_size,
-                 num_targets=1,
+                 num_classes=2,
                  dropout=0):
         super(GCN, self).__init__()
 
         self.conv1 = GCNConv(num_features,
                              hidden_size)
         self.conv2 = GCNConv(hidden_size,
-                             num_targets)
+                             num_classes)
 
         self.dropout = dropout
         self.activation = F.relu

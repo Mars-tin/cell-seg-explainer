@@ -14,14 +14,14 @@ class MLP(nn.Module):
     def __init__(self,
                  num_features,
                  hidden_size,
-                 num_targets=1,
+                 num_classes=2,
                  dropout=0):
         super(MLP, self).__init__()
 
         self.fc1 = nn.Linear(num_features,
                              hidden_size)
         self.fc2 = nn.Linear(hidden_size,
-                             num_targets)
+                             num_classes)
 
         self.dropout = dropout
         self.activation = F.relu
