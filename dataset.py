@@ -1,13 +1,16 @@
-import argparse
 import os
 import numpy as np
+import pandas as pd
 import pickle
-import torch
+import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
 
+import torch
 from torch.utils.data import Dataset
 
 
-def generate_sample(size=200, seed=0, save=False):
+def generate_sample(num_features=7, size=200, seed=0, save=False):
     """
     Cell information:
     * Location: square box, x, y, r1, r2
@@ -28,7 +31,7 @@ def generate_sample(size=200, seed=0, save=False):
     cen = rs.uniform(0, fig_size, size=(size, 2))
     rad = np.abs(rs.normal(radius_mu, radius_sigma, size=(size, 2)))
     loc = np.array([cen[:, 0]-rad[:, 0], cen[:, 0]+rad[:, 0], cen[:, 1]-rad[:, 1], cen[:, 1]+rad[:, 1]])
-    marker = np.abs(rs.normal(marker_mu, marker_sigma, size=(size, 7)))
+    marker = np.abs(rs.normal(marker_mu, marker_sigma, size=(size, num_features)))
 
     # Generate labels
     w_y = rs.normal(size=(7, ))
@@ -52,10 +55,10 @@ def generate_sample(size=200, seed=0, save=False):
 
 class SyntheticDataset(Dataset):
 
-    def __init__(self, loc, marker, label, n_edge):
+    def __init__(self, num_classes, num_features, loc, marker, label, n_edge):
         super().__init__()
-        self.num_classes = 2
-        self.num_features = 7
+        self.num_classes = num_classes
+        self.num_features = num_features
 
         self.X = torch.from_numpy(marker).float()
         self.y = torch.from_numpy(label).float()
@@ -88,30 +91,56 @@ class SyntheticDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
-def generate_dataset(size=300, n_edge=5000, seed=0):
-    loc, marker, label = generate_sample(size=size, seed=seed, save=False)
-    return SyntheticDataset(loc, marker, label, n_edge)
+def generate_dataset(num_features=7, size=300, n_edge=5000, seed=0):
+    loc, marker, label = generate_sample(num_features=num_features, size=size, seed=seed, save=False)
+    return SyntheticDataset(2, num_features, loc, marker, label, n_edge)
+
+
+def load_dataset():
+    locations = ['XMin', 'XMax', 'YMin', 'YMax']
+    celltype = ['Alpha', 'Beta', 'Delta']
+    markers = ['CHGA', 'CPEP', 'GCG', 'SST']
+    metrics = ['Cell Intensity', 'Cytoplasm Intensity', '% Cytoplasm Completeness']
+    scores = []
+
+    for marker in markers:
+        for metric in metrics:
+            scores.append(marker+' '+metric)
+
+    for filename in os.listdir('data/'):
+        if 'Islet.csv' in filename:
+            df = pd.read_csv((os.path.join('data/', filename)))
+            df = df[locations + celltype]
+            # TODO
+
+
+def visualize_dataset():
+    def scatter_plot(df, filename):
+        x_sz = np.max(df['XMax'])
+        y_sz = np.max(df['YMax'])
+        df = df.loc[(df['Alpha'] == 1) | (df['Beta'] == 1) | (df['Delta'] == 1)]
+        fig, ax = plt.subplots()
+        for tp, color in {'Alpha': 'tab:orange', 'Beta': 'tab:blue', 'Delta': 'tab:red'}.items():
+            df_type = df.loc[df[tp] == 1]
+            x = np.asarray(df_type['XMin'] + df_type['XMax'])/2
+            y = np.asarray(df_type['YMin'] + df_type['YMax'])/2
+            scale = np.asarray(df_type['XMax'] + df_type['YMax'] - df_type['XMin'] - df_type['YMax'])/2
+            ax.scatter(x, y, c=color, s=scale, label=tp, alpha=0.75, edgecolors='none')
+        plt.xlim(0, x_sz)
+        plt.ylim(0, y_sz)
+        ax.legend(loc='upper right')
+        plt.savefig('plot/visual/'+filename[:-4])
+        plt.show()
+
+    locations = ['XMin', 'XMax', 'YMin', 'YMax']
+    celltype = ['Alpha', 'Beta', 'Delta']
+
+    for filename in os.listdir('data/'):
+        if 'Islet.csv' in filename:
+            df = pd.read_csv((os.path.join('data/', filename)))
+            df = df[locations + celltype]
+            scatter_plot(df, filename)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-n', '--size',
-        type=int,
-        default=300,
-        help='number of cells'
-    )
-    parser.add_argument(
-        '-s', '--seed',
-        type=int,
-        default=0,
-        help='seed for random generation'
-    )
-    parser.add_argument(
-        '-o', '--save',
-        type=bool,
-        default=False,
-        help='Save the output or not'
-    )
-    args, _ = parser.parse_known_args()
-    generate_sample(args.size, args.seed)
+    visualize_dataset()

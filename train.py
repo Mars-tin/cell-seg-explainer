@@ -6,7 +6,7 @@ import numpy as np
 from model.mlp import MLP
 from model.gcn import GCN
 from model.gat import GAT
-from generate import generate_dataset
+from dataset import generate_dataset, load_dataset
 
 
 def set_seed(seed):
@@ -56,19 +56,21 @@ def evaluate(data, model, criterion, epoch, stats, verbose=False):
         log_training(epoch, stats)
 
 
-def train(model_name='gcn', epochs=1000, seed=0):
+def train(model_name='gcn', data='real', epochs=1000, seed=0):
     # Parameters
     verbose = False
     log_interval = 10
-
     patience = 50
-    n_cell = 300
-    n_edge = 3000
     drop = 0
 
     # Dataset
     set_seed(seed)
-    data = generate_dataset(n_cell, n_edge, seed)
+    if data == 'real':
+        data = load_dataset()
+    else:
+        n_cell = 300
+        n_edge = 3000
+        data = generate_dataset(n_cell, n_edge, seed)
 
     # Loss functions
     criterion = torch.nn.MSELoss()
@@ -77,7 +79,7 @@ def train(model_name='gcn', epochs=1000, seed=0):
     # Model
     if model_name == "gcn":
         model = GCN(
-            num_features=7,
+            num_features=data.num_features,
             hidden_size=32,
             dropout=drop
         )
