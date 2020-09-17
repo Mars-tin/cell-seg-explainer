@@ -32,3 +32,6 @@ class GCN(nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.conv2(x, edge_index)
         return x
+
+    def encode(self, x, edge_index):
+        return self.activation(self.conv1(x, edge_index))

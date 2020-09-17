@@ -31,3 +31,6 @@ class MLP(nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         return x
+
+    def encode(self, x, edge_index):
+        return self.activation(self.fc1(x))

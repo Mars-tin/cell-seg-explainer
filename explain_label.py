@@ -1,7 +1,7 @@
 import argparse
-from math import sqrt
-import matplotlib.pyplot as plt
 import networkx as nx
+
+from sklearn.cluster import KMeans
 
 from torch_geometric.data import Data
 from torch_geometric.utils import k_hop_subgraph, to_networkx
@@ -26,14 +26,33 @@ def main(parser):
         epochs, data, model = train(model_name, data, epochs, seed, verbose=(data == 'real'))
     else:
         epoch, data, model = load_model(model_name, data, seed, load_file)
+
+    with torch.no_grad():
+        embedding = model.encode(data.X, data.edge_index)
     num_hops = 0
     for module in model.modules():
         if isinstance(module, MessagePassing):
             num_hops += 1
 
+    # Perform K-Means for centers
+    for num_cluster in np.arange(10, 100, 10):
+        kmeans = KMeans(n_clusters=num_cluster, init='k-means++')
+        kmeans.fit(embedding)
+        wss = kmeans.inertia_
+        print(num_cluster, wss)
+
+    centers = kmeans.cluster_centers_
+    indices = []
+    for center in centers:
+        dist_map = np.linalg.norm(embedding - center, axis=1)
+        dist_map[indices] = np.infty
+        idx = np.argmin(dist_map)
+        indices.append(idx)
+
+    # Explain
     explainer = GNNExplainer(model, epochs=epochs)
 
-    for node_idx in range(5):
+    for node_idx in indices:
         node_feat_mask, edge_mask = explainer.explain_node(node_idx, data.X, data.edge_index)
         subset, edge_index, _, hard_edge_mask = k_hop_subgraph(
             node_idx, num_hops, data.edge_index, relabel_nodes=True)
@@ -48,7 +67,7 @@ def main(parser):
                 print("Node: ", node_idx, "; Label:", data.y[node_idx].item())
                 print("Related nodes:", G.nodes)
                 print("Related edges:", G.edges)
-                print("Marker importance:", node_feat_mask)
+                print("Marker mask:", node_feat_mask)
                 for node in G.nodes:
                     print("Node:", node, "; Label:", data.y[node].item(), "; Marker:", data.X[node])
         except TypeError:
