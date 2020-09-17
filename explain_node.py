@@ -3,33 +3,35 @@ from math import sqrt
 import matplotlib.pyplot as plt
 import networkx as nx
 
-import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import k_hop_subgraph, to_networkx
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn.models import GNNExplainer
 
-from train import train
+from train import *
 
 
 def main(parser):
     # Parameter
     args, _ = parser.parse_known_args()
-    data = 'synthetic'
+    load_file = 'model_seed=0.tar'
+    data = 'real'
     model_name = args.model
     node_idx = args.node
     verbose = args.verbose
     epochs = 1000
-    seed = 1
+    seed = 0
 
     # Training
-    epochs, data, model = train(model_name, data, epochs, seed, verbose=(data == 'real'))
+    if load_file is None:
+        epochs, data, model = train(model_name, data, epochs, seed, verbose=(data == 'real'))
+    else:
+        epoch, data, model = load_model(model_name, data, seed, load_file)
     num_hops = 0
     for module in model.modules():
         if isinstance(module, MessagePassing):
             num_hops += 1
 
-    # Explaining
     explainer = GNNExplainer(model, epochs=epochs)
     node_feat_mask, edge_mask = explainer.explain_node(node_idx, data.X, data.edge_index)
     subset, edge_index, _, hard_edge_mask = k_hop_subgraph(
@@ -37,7 +39,11 @@ def main(parser):
     hard_mask = edge_mask[hard_edge_mask]
     y = data.y[subset].to(torch.float) / data.y.max().item()
     graph_data = Data(edge_index=edge_index, att=hard_mask, y=y, num_nodes=y.size(0))
-    G = to_networkx(graph_data, node_attrs=['y'], edge_attrs=['att'])
+    try:
+        G = to_networkx(graph_data, node_attrs=['y'], edge_attrs=['att'])
+    except TypeError:
+        print("Unexplainable!")
+        exit(-1)
     mapping = {k: i for k, i in enumerate(subset.tolist())}
     G = nx.relabel_nodes(G, mapping)
 
@@ -79,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-n', '--node',
         type=int,
-        default=0,
+        default=1,
         help='Index of node to explain'
     )
     parser.add_argument(

@@ -2,6 +2,8 @@
 data/
 ref/
 save/
+checkpoints/
+plot/
 output.csv
 
 # Byte-compiled / optimized / DLL files
