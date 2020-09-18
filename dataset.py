@@ -12,14 +12,19 @@ from torch.utils.data import Dataset
 
 class SyntheticDataset(Dataset):
 
-    def __init__(self, num_classes, num_features, loc, marker, label, n_edge=None):
+    def __init__(self, num_classes, num_features, loc, marker, label, n_edge=None, **kwargs):
         super().__init__()
         self.num_classes = num_classes
         self.num_features = num_features
 
         self.X = torch.from_numpy(marker).float()
         self.y = torch.from_numpy(label).long()
+        self.loc = torch.from_numpy(loc)
+        self.celltype = torch.from_numpy(kwargs.get('celltype')).int()
+
         n = self.__len__()
+        self.sizes = [n]
+        self.samples = [kwargs.get('sample')]
 
         if n_edge is None:
             n_edge = 10 * n
@@ -56,6 +61,9 @@ class SyntheticDataset(Dataset):
         self.train_mask = torch.cat((self.train_mask, dataset.train_mask), 0)
         self.val_mask = torch.cat((self.val_mask, dataset.val_mask), 0)
         self.test_mask = torch.cat((self.test_mask, dataset.test_mask), 0)
+        self.loc = torch.cat((self.loc, dataset.loc), 1)
+        self.celltype = torch.cat((self.celltype, dataset.celltype), 0)
+        self.sizes.append(dataset.__len__())
 
 
 def generate_sample(num_features=7, size=300, seed=0, save=False):
@@ -133,12 +141,13 @@ def load_dataset():
             else:
                 label = np.ones((marker.shape[0], 1), dtype=int)
             loc = np.asarray([df['XMin'], df['XMax'], df['YMin'], df['YMax']])
+            tp = np.asarray([df['Beta'] - df['Delta']]).T
             if dataset is None:
                 dataset = SyntheticDataset(
-                    2, marker.shape[1], loc, marker, label)
+                    2, marker.shape[1], loc, marker, label, celltype=tp, sample=filename[:7])
             else:
                 dataset.merge(SyntheticDataset(
-                    2, marker.shape[1], loc, marker, label))
+                    2, marker.shape[1], loc, marker, label, celltype=tp, sample=filename[:7]))
     return dataset
 
 
@@ -195,6 +204,7 @@ def visualize_dataset():
             df = pd.read_csv((os.path.join('data/', filename)))
             df = df[locations + celltype]
             box_plot(df, filename)
+            scatter_plot(df, filename)
 
 
 if __name__ == "__main__":

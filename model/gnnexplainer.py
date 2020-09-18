@@ -1,5 +1,4 @@
 from math import sqrt
-from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -188,7 +187,7 @@ class GNNExplainer(torch.nn.Module):
 
         return edge_mask, epoch_losses
 
-    def visualize_subgraph(self, node_idx, dataset, edge_mask, y=None,
+    def visualize_subgraph(self, node_idx, dataset, edge_mask, y=None, show=True,
                            save=False, verbose=True, threshold=None, **kwargs):
 
         edge_index = dataset.edge_index
@@ -228,40 +227,41 @@ class GNNExplainer(torch.nn.Module):
         mapping = {k: i for k, i in enumerate(subset.tolist())}
         G = nx.relabel_nodes(G, mapping)
 
-        kwargs['with_labels'] = kwargs.get('with_labels') or True
-        kwargs['font_size'] = kwargs.get('font_size') or 10
-        kwargs['node_size'] = kwargs.get('node_size') or 200
-        kwargs['cmap'] = kwargs.get('cmap') or 'Set3'
-
         if verbose:
-            print("Node: ", node_idx, "; Label:", data.y[node_idx].item())
+            print("Node: ", node_idx, "; Label:", dataset.y[node_idx].item())
             print("Related nodes:", G.nodes)
             print("Related edges:", G.edges)
             for node in G.nodes:
                 print("Node:", node, "; Label:", dataset.y[node].item(), "; Marker:", dataset.X[node])
 
-        pos = nx.spring_layout(G)
-        ax = plt.gca()
+        if show:
+            kwargs['with_labels'] = kwargs.get('with_labels') or True
+            kwargs['font_size'] = kwargs.get('font_size') or 10
+            kwargs['node_size'] = kwargs.get('node_size') or 200
+            kwargs['cmap'] = kwargs.get('cmap') or 'Set3'
 
-        for source, target, graph_data in G.edges(data=True):
-            ax.annotate(
-                '', xy=pos[target], xycoords='data', xytext=pos[source],
-                textcoords='data', arrowprops=dict(
-                    arrowstyle="->",
-                    alpha=max(graph_data['att'], 0.1),
-                    shrinkA=sqrt(1000) / 2.0,
-                    shrinkB=sqrt(1000) / 2.0,
-                    connectionstyle="arc3,rad=0.1",
-                ))
+            pos = nx.spring_layout(G)
+            ax = plt.gca()
 
-        nx.draw_networkx_nodes(G, pos, node_color=y.flatten(), **kwargs)
-        nx.draw_networkx_labels(G, pos, **kwargs)
+            for source, target, graph_data in G.edges(data=True):
+                ax.annotate(
+                    '', xy=pos[target], xycoords='data', xytext=pos[source],
+                    textcoords='data', arrowprops=dict(
+                        arrowstyle="->",
+                        alpha=max(graph_data['att'], 0.1),
+                        shrinkA=sqrt(1000) / 2.0,
+                        shrinkB=sqrt(1000) / 2.0,
+                        connectionstyle="arc3,rad=0.1",
+                    ))
 
-        if save:
-            plt.savefig('plot/sample')
-        plt.show()
+            nx.draw_networkx_nodes(G, pos, node_color=y.flatten(), **kwargs)
+            nx.draw_networkx_labels(G, pos, **kwargs)
 
-        return plt
+            if save:
+                plt.savefig('plot/sample')
+            plt.show()
+
+        return G.nodes
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
