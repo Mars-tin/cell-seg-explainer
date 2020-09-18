@@ -33,8 +33,8 @@ def scatter_plot(nodes, dataset, filename):
     x = np.asarray(xmin + xmax) / 2
     y = np.asarray(ymin + ymax) / 2
     scale = np.asarray(xmax + ymax - xmin - ymin) / 2
-    x_sz = 15000
-    y_sz = 15000
+    x_sz = 22000
+    y_sz = 12000
 
     fig, ax = plt.subplots()
 
@@ -60,8 +60,8 @@ def scatter_plot(nodes, dataset, filename):
 
 def box_plot(nodes, dataset, filename):
     xmin, xmax, ymin, ymax = np.array(dataset.loc)
-    x_sz = 15000
-    y_sz = 15000
+    x_sz = 22000
+    y_sz = 12000
 
     fig, ax = plt.subplots()
     colors = ['y', 'b', 'r']
@@ -92,9 +92,10 @@ def box_plot(nodes, dataset, filename):
     plt.show()
 
 
-def view_local(ran, nodes, dataset, filename):
+def view_local(islet, nodes, dataset, filename):
+    ran, shape = islet
     xmin, xmax, ymin, ymax = np.array(dataset.loc)
-    fig, ax = plt.subplots(figsize=(10, 15))
+    fig, ax = plt.subplots(figsize=shape)
     colors = ['y', 'b', 'r']
     cells = [[], [], []]
 
@@ -152,14 +153,13 @@ def main(parser):
     '''
 
     # RESULT: k = 6 for embedding, 40 for location
-    k = 40
+    k = 50
     verbose = False
-    '''
+
+    # x = np.array(data.loc).T[np.where(data.y == args.label)[0]]
     with torch.no_grad():
         x = model.encode(data.X, data.edge_index)
     x = x[np.where(data.y == args.label)[0]]
-    '''
-    x = np.array(data.loc).T[np.where(data.y == args.label)[0]]
 
     kmeans = KMeans(n_clusters=k, init='k-means++')
     kmeans.fit(x)
@@ -178,7 +178,7 @@ def main(parser):
     marker_strength = np.zeros(data.num_features)
 
     for node_idx in indices:
-        node_idx = int(node_idx)
+        node_idx = int(node_idx) + data.sizes[0]
 
         try:
             node_feat_mask, edge_mask = explainer.explain_node(
@@ -202,7 +202,34 @@ def main(parser):
     scatter_plot(all_nodes, data, 'scatter_{}'.format(k))
     box_plot(all_nodes, data, 'box_{}'.format(k))
 
-    view_local((4500, 5200, 2700, 4200), all_nodes, data, 'islets_{}'.format(k))
+    '''
+    islets = [
+        [(4500, 5200, 2700, 4200), (10, 15)],
+        [(2500, 3100, 3300, 4000), (10, 12)],
+        [(9500, 10200, 6400, 7700), (10, 15)],
+        [(3600, 4400, 1500, 3000), (10, 15)],
+        [(7300, 8100, 6000, 6800), (10, 10)],
+        [(8200, 9300, 8300, 9300), (10, 8)],
+        [(6000, 6800, 200, 1700), (10, 15)],
+        [(6000, 6800, 1800, 2600), (10, 10)],
+        [(3100, 4000, 6500, 7400), (10, 10)],
+        [(400, 1200, 5000, 5800), (10, 10)]
+    ]
+    '''
+    islets = [
+        [(900, 1300, 500, 1000), (10, 10)],
+        [(1400, 2200, 1500, 2100), (10, 10)],
+        [(2300, 2900, 800, 1800), (10, 15)],
+        [(3600, 4700, 1800, 2600), (10, 8)],
+        [(5200, 6100, 5700, 6400), (10, 8)],
+        [(8300, 9100, 6100, 6900), (10, 10)],
+        [(15000, 16100, 6200, 7600), (10, 12)],
+        [(13000, 14300, 8400, 9300), (10, 8)],
+        [(13200, 15200, 2500, 3300), (10, 6)],
+        [(13500, 14100, 3500, 3900), (10, 10)]
+    ]
+    for idx, islet in enumerate(islets):
+        view_local(islet, all_nodes, data, 'islet_{}_{}'.format(idx, k))
     print("Total marker strength:", marker_strength)
 
 
@@ -217,7 +244,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-l', '--label',
         type=int,
-        default=1,
+        default=0,
         help='Index of label to explain'
     )
     parser.add_argument(

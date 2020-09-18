@@ -207,5 +207,67 @@ def visualize_dataset():
             scatter_plot(df, filename)
 
 
+def view_islet(filename, ran, id, shape=(10, 15)):
+    locations = ['XMin', 'XMax', 'YMin', 'YMax']
+    celltype = ['Alpha', 'Beta', 'Delta']
+
+    df = pd.read_csv((os.path.join('data/', filename)))
+    df = df[locations + celltype]
+
+    df = df.loc[(df['Alpha'] == 1) | (df['Beta'] == 1) | (df['Delta'] == 1)]
+    fig, ax = plt.subplots(figsize=shape)
+    for tp, color in {'Alpha': 'y', 'Beta': 'b', 'Delta': 'r'}.items():
+        df_type = df.loc[df[tp] == 1]
+        cells = []
+        for idx, row in df_type.iterrows():
+            rect = Rectangle((row['XMin'], row['YMin']),
+                             row['XMax']-row['XMin'],
+                             row['YMax']-row['YMin'],
+                             facecolor=color, alpha=1)
+            cells.append(rect)
+        pc = PatchCollection(cells, match_original=True)
+        ax.add_collection(pc)
+
+    x1, x2, y1, y2 = ran
+    plt.xlim(x1, x2)
+    plt.ylim(y1, y2)
+    a = Patch(color='y', label='Alpha')
+    b = Patch(color='b', label='Beta')
+    d = Patch(color='r', label='Delta')
+    ax.legend(handles=[a, b, d], loc='upper right')
+    plt.savefig('plot/islet_{}_ran={}'.format(id, ran))
+    plt.show()
+
+
 if __name__ == "__main__":
-    visualize_dataset()
+    islets = [
+        [(4500, 5200, 2700, 4200), (10, 15)],
+        [(2500, 3100, 3300, 4000), (10, 12)],
+        [(9500, 10200, 6400, 7700), (10, 15)],
+        [(3600, 4400, 1500, 3000), (10, 15)],
+        [(7300, 8100, 6000, 6800), (10, 10)],
+        [(8200, 9300, 8300, 9300), (10, 8)],
+        [(6000, 6800, 200, 1700), (10, 15)],
+        [(6000, 6800, 1800, 2600), (10, 10)],
+        [(3100, 4000, 6500, 7400), (10, 10)],
+        [(400, 1200, 5000, 5800), (10, 10)]
+    ]
+    filename = 'ABHQ115-T2D-Islet.csv'
+    for idx in range(10):
+        view_islet(filename, islets[idx][0], idx, shape=islets[idx][1])
+
+    islets = [
+        [(900, 1300, 500, 1000), (10, 10)],
+        [(1400, 2200, 1500, 2100), (10, 10)],
+        [(2300, 2900, 800, 1800), (10, 15)],
+        [(3600, 4700, 1800, 2600), (10, 8)],
+        [(5200, 6100, 5700, 6400), (10, 8)],
+        [(8300, 9100, 6100, 6900), (10, 10)],
+        [(15000, 16100, 6200, 7600), (10, 12)],
+        [(13000, 14300, 8400, 9300), (10, 8)],
+        [(13200, 15200, 2500, 3300), (10, 6)],
+        [(13500, 14100, 3500, 3900), (10, 10)]
+    ]
+    filename = 'AFG1440-ND-Islet.csv'
+    for idx in range(10):
+        view_islet(filename, islets[idx][0], idx, shape=islets[idx][1])
