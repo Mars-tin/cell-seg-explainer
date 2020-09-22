@@ -21,12 +21,12 @@ class GNNExplainer(torch.nn.Module):
         'node_feat_ent': 0.1,
     }
 
-    def __init__(self, model, epochs: int = 100, lr: float = 0.01):
+    def __init__(self, model, num_hops=None, epochs=100, lr=0.01):
         super(GNNExplainer, self).__init__()
         self.model = model
         self.epochs = epochs
         self.lr = lr
-        self.num_hops = self.__num_hops__()
+        self.num_hops = self.__num_hops__() if num_hops is None else num_hops
 
     def __set_masks__(self, x, edge_index, init="normal"):
         (N, F), E = x.size(), edge_index.size(1)
@@ -103,7 +103,7 @@ class GNNExplainer(torch.nn.Module):
         return loss
 
     def __graph_loss__(self, log_logits, pred_label):
-        loss = -torch.log(log_logits[0, pred_label])
+        loss = -torch.log(log_logits[pred_label])
         m = self.edge_mask.sigmoid()
         loss = loss + self.coeffs['edge_size'] * m.sum()
         ent = -m * torch.log(m + EPS) - (1 - m) * torch.log(1 - m + EPS)
@@ -136,7 +136,8 @@ class GNNExplainer(torch.nn.Module):
             optimizer.zero_grad()
             h = x * self.node_feat_mask.view(1, -1).sigmoid()
             logits = self.model(x=h, edge_index=edge_index, **kwargs)
-            loss = self.__loss__(mapping, F.log_softmax(logits, dim=1), pred_label)
+            pred = F.log_softmax(logits, dim=1)
+            loss = self.__loss__(mapping, pred, pred_label)
             loss.backward()
             optimizer.step()
 
@@ -187,7 +188,7 @@ class GNNExplainer(torch.nn.Module):
 
         return edge_mask, epoch_losses
 
-    def visualize_subgraph(self, node_idx, dataset, edge_mask, y=None, show=True,
+    def visualize_subgraph(self, node_idx, dataset, edge_mask, pos=None, y=None, show=True,
                            save=False, verbose=True, threshold=None, **kwargs):
 
         edge_index = dataset.edge_index
@@ -230,7 +231,10 @@ class GNNExplainer(torch.nn.Module):
         if verbose:
             print("Node: ", node_idx, "; Label:", dataset.y[node_idx].item())
             print("Related nodes:", G.nodes)
-            print("Related edges:", G.edges)
+            print("Related edges:")
+            for source, target, graph_data in G.edges(data=True):
+                if graph_data['att'] > 0.95:
+                    print('{}->{}: {}'.format(source, target, graph_data['att']))
             for node in G.nodes:
                 print("Node:", node, "; Label:", dataset.y[node].item(), "; Marker:", dataset.X[node])
 
@@ -240,7 +244,8 @@ class GNNExplainer(torch.nn.Module):
             kwargs['node_size'] = kwargs.get('node_size') or 200
             kwargs['cmap'] = kwargs.get('cmap') or 'Set3'
 
-            pos = nx.spring_layout(G)
+            if pos is None:
+                pos = nx.spring_layout(G)
             ax = plt.gca()
 
             for source, target, graph_data in G.edges(data=True):
@@ -261,7 +266,7 @@ class GNNExplainer(torch.nn.Module):
                 plt.savefig('plot/sample')
             plt.show()
 
-        return G.nodes
+        return G
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'

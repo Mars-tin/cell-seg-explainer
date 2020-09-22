@@ -64,7 +64,7 @@ def train(model_name='gcn', data='synthetic', epochs=1000, seed=0, verbose=True)
     print("The loss on test dataset is:", stats[idx][2],
           "| The accuracy on test dataset is:", stats[idx][-1],
           "| Obtained in epoch", epoch)
-    # save_model(model, seed, epoch)
+    save_model(model, seed, epoch)
     return epoch, data, best_model
 
 

@@ -8,6 +8,7 @@ from matplotlib.patches import Patch, Rectangle
 
 import torch
 from torch.utils.data import Dataset
+import torch_geometric.transforms as T
 
 
 class SyntheticDataset(Dataset):
@@ -30,7 +31,7 @@ class SyntheticDataset(Dataset):
             n_edge = 10 * n
         x = np.mean(loc[0:2], axis=0)
         y = np.mean(loc[2:4], axis=0)
-        center = np.concatenate((x, y))
+        center = np.stack((x, y)).transpose()
         logits = -np.linalg.norm(
             center.reshape(1, n, 2) - center.reshape(n, 1, 2), axis=2
         )
@@ -109,7 +110,7 @@ def generate_sample(num_features=7, size=300, seed=0, save=False):
     return loc, marker, label
 
 
-def generate_dataset(num_features=7, size=300, n_edge=5000, seed=0):
+def generate_dataset(num_features=7, size=300, n_edge=None, seed=0):
     loc, marker, label = generate_sample(num_features=num_features, size=size, seed=seed, save=False)
     return SyntheticDataset(2, num_features, loc, marker, label, n_edge)
 
@@ -119,6 +120,13 @@ def load_dataset():
     celltype = ['Alpha', 'Beta', 'Delta']
     markers = ['CPEP', 'GCG', 'SST']
     metrics = ['Cytoplasm Intensity', '% Cytoplasm Completeness']
+    # metrics = ['Cytoplasm Intensity']
+
+    # files = ['ABHQ115-T2D-Islet.csv', 'AFG1440-ND-Islet.csv']
+    files = ['ABHQ115-T2D-Islet.csv', 'AFG1440-ND-Islet.csv', 'ABIC495-T2D-Islet.csv']
+    # files = ['ABHQ115-T2D-Islet.csv', 'AFG1440-ND-Islet.csv', 'ABIC495-T2D-Islet.csv',
+    #          'AFES372-ND-Islet.csv', 'ADLE098-T2D-Islet.csv']
+
     scores = []
 
     for marker in markers:
@@ -127,7 +135,7 @@ def load_dataset():
 
     # for filename in os.listdir('data/'):
     dataset = None
-    for filename in ['ABHQ115-T2D-Islet.csv', 'AFG1440-ND-Islet.csv']:
+    for filename in files:
         if 'Islet.csv' in filename:
             df = pd.read_csv((os.path.join('data/', filename)))
             df = df.loc[(df['Alpha'] == 1) | (df['Beta'] == 1) | (df['Delta'] == 1)]
@@ -241,6 +249,7 @@ def view_islet(filename, ran, id, shape=(10, 15)):
 
 if __name__ == "__main__":
     islets = [
+        [(8400, 9800, 3800, 5800), (10, 15)],
         [(4500, 5200, 2700, 4200), (10, 15)],
         [(2500, 3100, 3300, 4000), (10, 12)],
         [(9500, 10200, 6400, 7700), (10, 15)],

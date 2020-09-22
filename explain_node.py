@@ -7,7 +7,7 @@ from train import *
 def main(parser):
     # Parameter
     args, _ = parser.parse_known_args()
-    load_file = 'model_seed=0.tar'
+    load_file = 'gcn_seed=0.tar'
     data = 'real'
     model_name = args.model
     node_idx = args.node
