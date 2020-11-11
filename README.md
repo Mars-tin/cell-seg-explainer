@@ -2,8 +2,6 @@
 
 An GNN explainer on Synthetic dataset over cell segmentation data.
 
-![Demonstration](https://github.com/Mars-tin/mars-tin.github.io/blob/master/projects/seg_explainer/cover.png)
-
 ## Node Explanation
 
 ### Usage
@@ -57,5 +55,5 @@ The visualization is automatic:
 
 ## Label Explanation
 
-TODO
+![Demonstration](https://github.com/Mars-tin/mars-tin.github.io/blob/master/projects/2020/seg_explainer/cover.png)
 
